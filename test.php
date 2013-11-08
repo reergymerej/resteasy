@@ -150,6 +150,8 @@ class FieldCollection {
 			return $this->fields[$fieldName]->castValue($value);
 		}
 	}
+
+	
 }
 
 $fieldDef1 = new FieldDefinition('field1');

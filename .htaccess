@@ -1,0 +1,5 @@
+#godaddy bullshit
+Options -Multiviews
+
+RewriteEngine On
+RewriteRule ^api* api.php
