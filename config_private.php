@@ -8,8 +8,8 @@ $GLOBALS['objects_dir'] = 'objects';
 
 // database info
 $GLOBALS['server'] = 'localhost';
-$GLOBALS['db'] = 'db';
-$GLOBALS['user'] = 'user';
-$GLOBALS['password'] = 'password';
+$GLOBALS['db'] = 'wordtoth_a2b';
+$GLOBALS['user'] = 'wordtoth_visitor';
+$GLOBALS['password'] = 'visitor';
 
 ?>
