@@ -1,0 +1,5 @@
+<?php
+
+$apiFile = 'api';
+
+?>

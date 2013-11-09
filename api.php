@@ -1,4 +1,9 @@
 <?php
+
+require('config.php');
+require('Field.php');
+require('Request.php');
+
 $request = new Request();
 
 // find the class for this noun
@@ -15,86 +20,7 @@ $rest = new Rest();
 // process the request
 $rest->process($request);
 
-class Request {
-	public $verb;
-	public $url;
-	public $noun;
-	public $id;
-	public $parts;
-	public $params = [];
-	public $payload;
 
-	public function __construct() {
-		$this->verb = $_SERVER['REQUEST_METHOD'];
-		$this->url = explode('?', urldecode($_SERVER['REQUEST_URI']))[0];
-
-		$apiFile = basename(__FILE__, '.php');
-		$this->parts = explode('/', substr( $this->url, strPos($this->url, $apiFile) + ( strlen($apiFile) + 1 ) ));
-
-		$this->noun = $this->parts[0];
-		if (isset($this->parts[1])) {
-			$this->id = $this->parts[1];
-		}
-
-		$this->params = $_GET;
-		$this->payload = file_get_contents("php://input");
-		$this->payload = json_decode($this->payload);
-	}
-}
-
-class Field {
-
-	public $name;
-	public $type;
-	public $required;
-
-	/**
-	* @param {String} $name
-	* @param {String} [$type='string']
-	* @param {Boolean} [$required=false]
-	*/
-	public function __construct($name, $type = 'string', $required = false) {
-		$this->name = $name;
-		$this->type = $type;
-		$this->required = $required;
-	}
-
-	// DEBUG
-	public function describe() {
-		echo "It looks like...\n";
-		foreach($this as $key => $val) {
-			echo "$key: $val\n";
-		}
-		echo "\n";
-	}
-
-	/**
-	* @param $value
-	* @return converted value, wrapped in '' if needed
-	*/
-	public function castValue($value) {
-		switch ($this->type) {
-			case 'number':
-			case 'int':
-			case 'float':
-				// is_null($value);
-				$value += 0;
-				break;
-			case 'bool':
-				// if (is_numeric($value)) {
-				// 	$value = $value === 1;
-				// } else {
-				$value = $value ? 1 : 0;
-				break;
-			case 'string':
-			default:
-				$value = "'$value'";
-				break;
-		}
-
-		return $value;
-	}
-}
 
 class RestEasy {
 	public $fields;
@@ -118,7 +44,19 @@ class RestEasy {
 	*/
 	public function add($field, $type = 'string', $required = false) {
 		if (!is_a($field, 'Field')) {
-			$field = new Field($field, $type, $required);
+			switch ($type) {
+				case 'bool':
+					$field = new BooleanField($field, $required);
+					break;
+				case 'number':
+					$field = new NumberField($field, $required);
+					break;
+				case 'string':
+					$field = new TextField($field, $required);
+					break;
+				default:
+					$field = new Field($field, $type, $required);
+			}
 		}
 
 		$this->fields[$field->name] = $field;
@@ -165,7 +103,7 @@ class RestEasy {
 		foreach ($postData as $key => $val) {
 			if (isset($this->fields[$key])) {
 				array_push($fieldPieces, $key);
-				array_push($valuePieces, $this->fields[$key]->castValue($val));
+				array_push($valuePieces, $this->fields[$key]->castForSQL($val));
 			}
 		}
 
@@ -204,7 +142,7 @@ class RestEasy {
 
 		foreach ($putData as $key => $val) {
 			if (isset($this->fields[$key])) {
-				array_push($valuePieces, $key . ' = ' . $this->fields[$key]->castValue($val));
+				array_push($valuePieces, $key . ' = ' . $this->fields[$key]->castForSQL($val));
 			}
 		}
 
@@ -214,11 +152,16 @@ class RestEasy {
 	/**
 	* @param $value
 	* @param {String} $fieldName
-	* @return value, casted according to the field's castValue method
+	* @param {Boolean} [$forSQL=true]
+	* @return value, casted according to the field's castForSQL method
 	*/
-	public function valueForField($value, $fieldName) {
+	public function valueForField($value, $fieldName, $forSQL = true) {
 		if (isset($this->fields[$fieldName])) {
-			return $this->fields[$fieldName]->castValue($value);
+			if ($forSQL) {
+				return $this->fields[$fieldName]->castForSQL($value);
+			} else {
+				return $this->fields[$fieldName]->castForJSON($value);
+			}
 		}
 	}
 
@@ -248,16 +191,27 @@ class RestEasy {
 				return;
 			};
 
-			if (mysql_num_rows($result) > 0) {
-				$rows = [];
-				while ($row = mysql_fetch_assoc($result)) {
-					array_push($rows, $this->castRow($row));
-				}
-				echo json_encode($rows);
+			$response = '';
+			switch ($this->request->verb) {
+				case 'POST':
+					$response = '{"' . $this->idField . '":' . mysql_insert_id() . '}';
+					break;
+				case 'PUT':
+					$response = mysql_affected_rows();
+					break;
+				default:
+					if (mysql_num_rows($result) > 0) {
+						$rows = [];
+						while ($row = mysql_fetch_assoc($result)) {
+							array_push($rows, $this->castRow($row));
+						}
+						$response = json_encode($rows);
+					}
 			}
 
+			echo $response;
 
-			
+			// TODO add the proper headers
 			// header('HTTP/1.0 204 No Content');
 		}
 		mysql_close($con);
@@ -330,7 +284,7 @@ class RestEasy {
 	*/
 	public function castRow($row) {
 		foreach ($row as $key => $val) {
-			$row[$key] = $this->valueForField($val, $key);
+			$row[$key] = $this->valueForField($val, $key, false);
 		}
 		return $row;
 	}

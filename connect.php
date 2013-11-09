@@ -3,7 +3,7 @@
 	function connect(){
 		$user = 'user';
 		$server = 'localhost';
-		$password = 'visitor';
+		$password = 'pw';
 		$db = 'db';
 		
 		if($connection = @mysql_connect($server, $user, $password)){

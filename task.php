@@ -1,5 +1,4 @@
 <?php
-
 class Rest extends RestEasy {
 	public $table = 'task';
 	public $idField = 'id';
