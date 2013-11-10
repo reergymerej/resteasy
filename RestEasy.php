@@ -29,6 +29,7 @@ class RestEasy {
 		if (!is_a($field, 'Field')) {
 			switch ($type) {
 				case 'bool':
+				case 'boolean':
 					$field = new BooleanField($field, $required);
 					break;
 				case 'number':
@@ -81,19 +82,23 @@ class RestEasy {
 
 		$fieldPieces = [];
 		$valuePieces = [];
-		$insert = '(';
+		$insert = '';
 
-		foreach ($postData as $key => $val) {
-			if (isset($this->fields[$key])) {
-				array_push($fieldPieces, $key);
-				array_push($valuePieces, $this->fields[$key]->castForSQL($val));
+		if ($this->hasAllRequiredFields($postData, true)) {
+			$insert .= '(';
+
+			foreach ($postData as $key => $val) {
+				if (isset($this->fields[$key])) {
+					array_push($fieldPieces, $key);
+					array_push($valuePieces, $this->fields[$key]->castForSQL($val));
+				}
 			}
-		}
 
-		$insert .= implode(', ', $fieldPieces);
-		$insert .= ') VALUES (';
-		$insert .= implode(', ', $valuePieces);
-		$insert .= ')';
+			$insert .= implode(', ', $fieldPieces);
+			$insert .= ') VALUES (';
+			$insert .= implode(', ', $valuePieces);
+			$insert .= ')';
+		}
 
 		return $insert;
 	}
@@ -114,22 +119,40 @@ class RestEasy {
 
 		$valuePieces = [];
 
-		// ensure each required value was provided
-		foreach ($this->fields as $field) {
-			if ($field->required) {
-				if (!isset($putData[$field->name])) {
-					throw new Exception("putData missing required field: $field->name");
+		if ($this->hasAllRequiredFields($putData)) {
+			foreach ($putData as $key => $val) {
+				if (isset($this->fields[$key])) {
+					// Don't set the id again.
+					if ($this->idField !== $key) {
+						array_push($valuePieces, $key . ' = ' . $this->fields[$key]->castForSQL($val));
+					}
 				}
 			}
 		}
 
-		foreach ($putData as $key => $val) {
-			if (isset($this->fields[$key])) {
-				array_push($valuePieces, $key . ' = ' . $this->fields[$key]->castForSQL($val));
+		return implode(', ', $valuePieces);
+	}
+
+	/**
+	* @param {Array} $data
+	* @param {Boolean} [$allowMissingId=false]
+	* @return {Boolean}
+	*/
+	private function hasAllRequiredFields($data, $allowMissingId = false) {
+		$hasAll = true;
+		foreach ($this->fields as $field) {
+			if ($field->required) {
+				$fieldName = $field->name;
+				if (!isset($data->$fieldName)) {
+
+					if ($fieldName !== $this->idField || !$allowMissingId) {
+						$this->response->addMessage("missing required field: $field->name");
+						$this->response->setResponseCode(400);
+					}
+				}
 			}
 		}
-
-		return implode(', ', $valuePieces);
+		return $hasAll;
 	}
 
 	/**
@@ -178,6 +201,9 @@ class RestEasy {
 						$this->response->setBody('{"' . $this->idField . '":' . mysql_insert_id() . '}');
 						break;
 					case 'PUT':
+						if (mysql_affected_rows() === 0) {
+							$this->response->setResponseCode(204);
+						}
 						$this->response->setBody(mysql_affected_rows());
 						break;
 					default:
@@ -186,7 +212,12 @@ class RestEasy {
 							while ($row = mysql_fetch_assoc($result)) {
 								array_push($rows, $this->castRow($row));
 							}
-							$this->response->setBody(json_encode($rows));
+
+							if (count($rows) > 1) {
+								$this->response->setBody(json_encode($rows));
+							} else {
+								$this->response->setBody(json_encode($rows[0]));
+							}
 						}
 				}
 			}

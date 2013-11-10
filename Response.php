@@ -15,7 +15,9 @@ class Response extends Messageable {
 
 	public function send() {
 		if ($messages = $this->request->getMessages()) {
-			$this->body .= $messages;
+			if ($GLOBALS['dev_mode']) {
+				$this->body .= $messages . "\n";
+			}
 		}
 
 		if ($GLOBALS['dev_mode']) {

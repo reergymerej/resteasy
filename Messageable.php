@@ -7,6 +7,7 @@ class Messageable {
 		100 => "Continue",
 		101 => "Switching Protocols",
 		102 => "Processing",
+
 		200 => "OK",
 		201 => "Created",
 		202 => "Accepted",
@@ -17,6 +18,7 @@ class Messageable {
 		207 => "Multi-Status",
 		208 => "Already Reported",
 		226 => "IM Used",
+		
 		300 => "Multiple Choices",
 		301 => "Moved Permanently",
 		302 => "Found",
@@ -26,6 +28,7 @@ class Messageable {
 		306 => "Switch Proxy",
 		307 => "Temporary Redirect",
 		308 => "Permanent Redirect",
+		
 		400 => "Bad Request",
 		401 => "Unauthorized",
 		402 => "Payment Required",
@@ -68,6 +71,7 @@ class Messageable {
 		496 => "No Cert",
 		497 => "HTTP to HTTPS",
 		499 => "Client Closed Request",
+		
 		500 => "Internal Server Error",
 		501 => "Not Implemented",
 		502 => "Bad Gateway",
@@ -103,7 +107,9 @@ class Messageable {
 	* @param {String} [$message='']
 	*/
 	public function setResponseCode($code) {
-		$this->responseCode = $code;
+		if (!isset($this->responseCode)) {
+			$this->responseCode = $code;
+		}
 	}
 
 	public function getResponseCode() {
