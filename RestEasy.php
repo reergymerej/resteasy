@@ -193,17 +193,13 @@ class RestEasy {
 		} else {
 			$rows = mysql_affected_rows();
 			if($rows === 0){
-				$this->request->setResponseCode(404);
+				$this->request->setResponseCode(204);
 			} else {
-
 				switch ($this->request->verb) {
 					case 'POST':
 						$this->response->setBody('{"' . $this->idField . '":' . mysql_insert_id() . '}');
 						break;
-					case 'PUT':
-						if (mysql_affected_rows() === 0) {
-							$this->response->setResponseCode(204);
-						}
+					case 'PUT':						
 						$this->response->setBody(mysql_affected_rows());
 						break;
 					default:
