@@ -199,8 +199,9 @@ class RestEasy {
 					case 'POST':
 						$this->response->setBody('{"' . $this->idField . '":' . mysql_insert_id() . '}');
 						break;
-					case 'PUT':						
-						$this->response->setBody(mysql_affected_rows());
+					case 'PUT':
+						$this->request->setResponseCode(204);
+						// $this->response->setBody(mysql_affected_rows());
 						break;
 					default:
 						if (mysql_num_rows($result) > 0) {
