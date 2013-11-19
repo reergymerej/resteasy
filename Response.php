@@ -26,8 +26,14 @@ class Response extends Messageable {
 			}
 		}
 
-		header("HTTP/1.0 {$this->getHeader()}");
-		echo $this->body;
+
+		$header = "HTTP/1.0 {$this->getHeader()}";
+		if (!strpos($header, '204')) {
+			header($header);
+			echo $this->body;
+		} else {
+			// TODO 204 responses seem to break header().
+		}
 	}
 
 	private function getHeader() {

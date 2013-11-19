@@ -22,7 +22,6 @@ if (file_exists($file)) {
 
 	// process the request
 	$rest->process($request);
-
 } else {
 	if ($request->noun && $request->noun !== 'php') {
 		$response->setResponseCode(400);

@@ -189,11 +189,14 @@ class RestEasy {
 			$this->request->setResponseCode(400);
 			$this->request->addMessage($sql);
 			$this->request->addMessage(mysql_error());
-			return;
 		} else {
 			$rows = mysql_affected_rows();
 			if($rows === 0){
-				$this->request->setResponseCode(204);
+				if ($this->request->verb === 'PUT') {
+					$this->request->setResponseCode(204);
+				} else {
+					$this->request->setResponseCode(404);
+				}
 			} else {
 				switch ($this->request->verb) {
 					case 'POST':
@@ -218,8 +221,8 @@ class RestEasy {
 						}
 				}
 			}
-
 		}
+
 		mysql_close($con);
 	}
 
@@ -259,7 +262,9 @@ class RestEasy {
 				break;
 		}
 
-		return $sql .= $this->getWhereClause() . $this->getOrderByClause();
+		$sql .= $this->getWhereClause() . $this->getOrderByClause();
+
+		return $sql;
 	}
 
 	/**
@@ -267,15 +272,45 @@ class RestEasy {
 	*/
 	public function getWhereClause() {
 		$where = '';
+		$whereId = '';
+		$whereParams = '';
 		
-		$id = $this->request->id;
-		if ($id) {
-			$where .= " WHERE $this->idField = " 
-				. $this->valueForField($id, $this->idField);
+		$whereId = $this->getWhereIdParam();
+		$whereParams = $this->getWhereParams();
+
+		$where .= $whereId;
+		if ($whereParams) {
+
+			if ($whereId) {
+				$where .= ' AND ';
+			}
+			$where .= $whereParams;
+		}
+
+		if ($where) {
+			$where = ' WHERE ' . $where;
 		}
 
 		return $where;
 	}
+
+	/**
+	* @return {String}
+	*/
+	public function getWhereIdParam() {
+		$id = $this->request->id;
+
+		if ($id) {
+			return "$this->idField = " . $this->valueForField($id, $this->idField);
+		} else {
+			return '';
+		}
+	}
+
+	/**
+	* @return {String}
+	*/
+	public function getWhereParams () {}
 
 	/**
 	* @return {String}
